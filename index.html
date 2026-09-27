@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Python IDE</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+}
+
+body {
+    background: #080808;
+    color: #d4d4d4;
+    font-family: "Segoe UI", Arial, sans-serif;
+    font-weight: 600;
+    overflow: hidden;
+    cursor: none;
+}
+
+button,
+textarea {
+    font: inherit;
+}
+
+#cursor {
+    position: fixed;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+    z-index: 99999;
+    transform: translate(-50%, -10%);
+}
+
+#cursor::before {
+    content: "";
+    position: absolute;
+    left: -5px;
+    top: 0;
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 8px solid #ffffff;
+}
+
+.top {
+    height: 42px;
+    display: flex;
+    align-items: center;
+    background: #101010;
+    border-bottom: 1px solid #252525;
+    padding: 0 12px;
+}
+
+.file-tab {
+    height: 42px;
+    min-width: 125px;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    background: #080808;
+    border-top: 2px solid #ffd21c;
+    color: #ddd;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.toolbar {
+    height: 42px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 10px;
+    background: #0c0c0c;
+    border-bottom: 1px solid #202020;
+}
+
+button {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    background: transparent;
+    color: #aaa;
+    padding: 6px 11px;
+    cursor: none;
+    font-size: 13px;
+    font-weight: 600;
+    transition:
+        color .35s cubic-bezier(.2,.8,.2,1);
+}
+
+button:hover {
+    color: #ffd21c;
+    background: transparent;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+button:focus,
+button:focus-visible,
+button:active {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    background: transparent;
+}
+
+.run {
+    color: #ddd;
+}
+
+.workspace {
+    height: calc(100vh - 84px);
+    display: flex;
+    flex-direction: column;
+}
+
+.editor-area {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    background: #080808;
+}
+
+.line-numbers {
+    width: 54px;
+    padding-top: 14px;
+    padding-right: 12px;
+    text-align: right;
+    color: #4b4b4b;
+    background: #080808;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 22px;
+    user-select: none;
+    overflow: hidden;
+}
+
+.editor-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+#highlight {
+    position: absolute;
+    inset: 0;
+    padding: 14px 18px;
+    margin: 0;
+    white-space: pre;
+    overflow: auto;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 22px;
+    pointer-events: none;
+    tab-size: 4;
+}
+
+#editor {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: 14px 18px;
+    margin: 0;
+    resize: none;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    background: transparent;
+    color: transparent;
+    caret-color: #ffffff;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 22px;
+    white-space: pre;
+    overflow: auto;
+    tab-size: 4;
+    z-index: 2;
+    cursor: none;
+}
+
+#editor:hover,
+#editor:active,
+#editor:focus,
+#editor:focus-visible {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+#editor::selection {
+    background: #264f78;
+    color: transparent;
+    outline: none;
+    border: none;
+}
+
+#editor::-moz-selection {
+    background: #264f78;
+    color: transparent;
+}
+
+.terminal {
+    height: 190px;
+    flex-shrink: 0;
+    background: #060606;
+    border-top: 1px solid #252525;
+    display: flex;
+    flex-direction: column;
+}
+
+.terminal-head {
+    height: 32px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    border-bottom: 1px solid #1d1d1d;
+    color: #888;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+#output {
+    flex: 1;
+    padding: 10px 14px;
+    margin: 0;
+    overflow: auto;
+    color: #c8c8c8;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 20px;
+    white-space: pre-wrap;
+}
+
+.status {
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    background: #101010;
+    border-top: 1px solid #252525;
+    color: #777;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.status span {
+    transition: color .35s cubic-bezier(.2,.8,.2,1);
+}
+
+.status span:hover {
+    color: #ffd21c;
+}
+
+.keyword {
+    color: #569cd6;
+    font-weight: 600;
+}
+
+.string {
+    color: #6a9955;
+    font-weight: 600;
+}
+
+.number {
+    color: #ce9178;
+    font-weight: 600;
+}
+
+.comment {
+    color: #6a6a6a;
+    font-weight: 600;
+}
+
+.builtin {
+    color: #4ec9b0;
+    font-weight: 600;
+}
+
+.function {
+    color: #dcdcaa;
+    font-weight: 600;
+}
+
+.boolean {
+    color: #569cd6;
+    font-weight: 600;
+}
+
+.decorator {
+    color: #c586c0;
+    font-weight: 600;
+}
+
+.operator {
+    color: #d4d4d4;
+    font-weight: 600;
+}
+</style>
+</head>
+
+<body>
+
+<div id="cursor"></div>
+
+<div class="top">
+    <div class="file-tab">main.py</div>
+</div>
+
+<div class="toolbar">
+    <button id="newBtn">New</button>
+    <button id="saveBtn">Save</button>
+    <button id="runBtn" class="run">▶ Run</button>
+    <button id="stopBtn">Stop</button>
+    <button id="clearBtn">Clear</button>
+</div>
+
+<div class="workspace">
+
+    <div class="editor-area">
+
+        <div class="line-numbers" id="lineNumbers">1</div>
+
+        <div class="editor-wrap">
+
+            <pre id="highlight"></pre>
+
+            <textarea
+                id="editor"
+                spellcheck="false"
+                autocomplete="off"
+                autocorrect="off"
+                autocapitalize="off"
+            >print("Hello, world!")
+
+for i in range(5):
+    print(i)</textarea>
+
+        </div>
+
+    </div>
+
+    <div class="terminal">
+
+        <div class="terminal-head">TERMINAL</div>
+
+        <pre id="output"></pre>
+
+    </div>
+
+</div>
+
+<div class="status">
+    <span>Python</span>
+    <span id="position">Ln 1, Col 1</span>
+</div>
+
+<audio
+    id="clickSound"
+    preload="auto"
+    src="mouse-click-by-ek6_VR0O6PL.mp3"
+></audio>
+
+<script src="https://cdn.jsdelivr.net/pyodide/v0.28.2/full/pyodide.js"></script>
+
+<script>
+const editor = document.getElementById("editor");
+const highlight = document.getElementById("highlight");
+const lineNumbers = document.getElementById("lineNumbers");
+const output = document.getElementById("output");
+const position = document.getElementById("position");
+const clickSound = document.getElementById("clickSound");
+const cursor = document.getElementById("cursor");
+
+let pyodide = null;
+let running = false;
+
+document.addEventListener("mousemove", e => {
+    cursor.style.left = e.clientX + "px";
+    cursor.style.top = e.clientY + "px";
+});
+
+document.addEventListener("click", () => {
+    clickSound.currentTime = 0;
+    clickSound.play().catch(() => {});
+});
+
+function escapeHTML(text) {
+    return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+}
+
+function highlightPython(code) {
+    let text = escapeHTML(code);
+
+    const tokens = [];
+
+    const save = value => {
+        const id = `___TOKEN_${tokens.length}___`;
+        tokens.push(value);
+        return id;
+    };
+
+    text = text.replace(
+        /(#.*$|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/gm,
+        match => {
+            if (match.startsWith("#")) {
+                return save(`<span class="comment">${match}</span>`);
+            }
+
+            return save(`<span class="string">${match}</span>`);
+        }
+    );
+
+    text = text.replace(
+        /\b(def|class|if|else|elif|for|while|in|is|not|and|or|import|from|as|return|break|continue|pass|try|except|finally|with|lambda|yield|raise|async|await|global|nonlocal|assert|del)\b/g,
+        '<span class="keyword">$1</span>'
+    );
+
+    text = text.replace(
+        /\b(print|len|range|str|int|float|list|dict|set|tuple|open|input|super|enumerate|zip|map|filter|sum|min|max|abs|round|type|isinstance)\b/g,
+        '<span class="builtin">$1</span>'
+    );
+
+    text = text.replace(
+        /\b(True|False|None)\b/g,
+        '<span class="boolean">$1</span>'
+    );
+
+    text = text.replace(
+        /\b\d+(?:\.\d+)?\b/g,
+        '<span class="number">$&</span>'
+    );
+
+    text = text.replace(
+        /(@\w+)/g,
+        '<span class="decorator">$1</span>'
+    );
+
+    text = text.replace(
+        /\b([A-Za-z_]\w*)(?=\()/g,
+        '<span class="function">$1</span>'
+    );
+
+    text = text.replace(
+        /(&lt;=|&gt;=|==|!=|=&gt;|[-+*/%=<>])/g,
+        '<span class="operator">$1</span>'
+    );
+
+    text = text.replace(
+        /___TOKEN_(\d+)___/g,
+        (_, index) => tokens[index]
+    );
+
+    return text || "\n";
+}
+
+function updateLines() {
+    const lines = editor.value.split("\n").length;
+
+    let numbers = "";
+
+    for (let i = 1; i <= lines; i++) {
+        numbers += i + "\n";
+    }
+
+    lineNumbers.textContent = numbers;
+}
+
+function updateHighlight() {
+    highlight.innerHTML = highlightPython(editor.value);
+    updateLines();
+    syncScroll();
+}
+
+function syncScroll() {
+    highlight.scrollTop = editor.scrollTop;
+    highlight.scrollLeft = editor.scrollLeft;
+    lineNumbers.scrollTop = editor.scrollTop;
+}
+
+function updatePosition() {
+    const before = editor.value.substring(0, editor.selectionStart);
+    const lines = before.split("\n");
+
+    const line = lines.length;
+    const col = lines[lines.length - 1].length + 1;
+
+    position.textContent = `Ln ${line}, Col ${col}`;
+}
+
+editor.addEventListener("input", () => {
+    updateHighlight();
+    updatePosition();
+});
+
+editor.addEventListener("scroll", syncScroll);
+
+editor.addEventListener("click", updatePosition);
+
+editor.addEventListener("keyup", updatePosition);
+
+editor.addEventListener("keydown", e => {
+    if (e.key === "Tab") {
+        e.preventDefault();
+
+        const start = editor.selectionStart;
+        const end = editor.selectionEnd;
+
+        editor.value =
+            editor.value.substring(0, start) +
+            "    " +
+            editor.value.substring(end);
+
+        editor.selectionStart = start + 4;
+        editor.selectionEnd = start + 4;
+
+        updateHighlight();
+        updatePosition();
+    }
+
+    if (e.ctrlKey && e.key === "Enter") {
+        e.preventDefault();
+        runPython();
+    }
+});
+
+document.getElementById("newBtn").onclick = () => {
+    editor.value = "";
+    output.textContent = "";
+    updateHighlight();
+    updatePosition();
+    editor.focus();
+};
+
+document.getElementById("saveBtn").onclick = () => {
+    const blob = new Blob(
+        [editor.value],
+        { type: "text/plain" }
+    );
+
+    const link = document.createElement("a");
+
+    link.href = URL.createObjectURL(blob);
+    link.download = "main.py";
+    link.click();
+
+    URL.revokeObjectURL(link.href);
+};
+
+document.getElementById("clearBtn").onclick = () => {
+    output.textContent = "";
+};
+
+document.getElementById("stopBtn").onclick = () => {
+    running = false;
+    output.textContent += "\n[Execution stopped]\n";
+};
+
+async function loadPython() {
+    if (pyodide) {
+        return;
+    }
+
+    output.textContent = "Loading Python...\n";
+
+    pyodide = await loadPyodide();
+
+    output.textContent = "Python ready.\n";
+}
+
+async function runPython() {
+    if (running) {
+        return;
+    }
+
+    running = true;
+    output.textContent = "";
+
+    try {
+        await loadPython();
+
+        if (!running) {
+            return;
+        }
+
+        const code = editor.value;
+        let captured = "";
+
+        pyodide.setStdout({
+            batched: text => {
+                if (running) {
+                    captured += text + "\n";
+                    output.textContent = captured;
+                    output.scrollTop = output.scrollHeight;
+                }
+            }
+        });
+
+        pyodide.setStderr({
+            batched: text => {
+                captured += text + "\n";
+                output.textContent = captured;
+                output.scrollTop = output.scrollHeight;
+            }
+        });
+
+        await pyodide.runPythonAsync(code);
+
+        if (running && captured === "") {
+            output.textContent = "[Program finished with no output]";
+        }
+
+    } catch (error) {
+        output.textContent += "\n" + error.toString();
+    }
+
+    running = false;
+}
+
+document.getElementById("runBtn").onclick = runPython;
+
+updateHighlight();
+updatePosition();
+</script>
+
+</body>
+</html>
